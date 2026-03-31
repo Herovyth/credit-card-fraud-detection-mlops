@@ -2,10 +2,12 @@ __pycache__/
 *.py[cod]
 .venv/
 .env
+
 data/
 models/
-.ipynb_checkpointsmlruns/
+
+.ipynb_checkpoints
+mlruns/
 .trash/
 mlflow.db
-mlruns/
 
