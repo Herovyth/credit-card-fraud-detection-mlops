@@ -1,0 +1,15 @@
+stages:
+  prepare:
+    cmd: python src/prepare.py data/raw/creditcard.csv data/prepared
+    deps:
+    - data/raw/creditcard.csv
+    - src/prepare.py
+    outs:
+    - data/prepared
+  train:
+    cmd: python src/train.py data/prepared data/models
+    deps:
+    - data/prepared
+    - src/train.py
+    outs:
+    - data/models

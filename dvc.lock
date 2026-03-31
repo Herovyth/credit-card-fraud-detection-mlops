@@ -1,0 +1,20 @@
+schema: '2.0'
+stages:
+  train:
+    cmd: python src/train.py data/prepared data/models
+    deps:
+    - path: data/prepared
+      hash: md5
+      md5: 17ffe4a1ec4977ea34598140adc2ebd4.dir
+      size: 164385386
+      nfiles: 2
+    - path: src/train.py
+      hash: md5
+      md5: 3a4cf78462b4bec6eecf3de1ad500282
+      size: 8156
+    outs:
+    - path: data/models
+      hash: md5
+      md5: d95002749329391865263f0e8d343b46.dir
+      size: 69346
+      nfiles: 2
