@@ -15,6 +15,23 @@ stages:
     outs:
     - path: data/models
       hash: md5
-      md5: d95002749329391865263f0e8d343b46.dir
-      size: 69346
+      md5: 607e7f4200666b76f479e21df43a0056.dir
+      size: 70088
+      nfiles: 2
+  prepare:
+    cmd: python src/prepare.py data/raw/creditcard.csv data/prepared
+    deps:
+    - path: data/raw/creditcard.csv
+      hash: md5
+      md5: ac810f4c1c520bf4ad18f5c94bde85f6
+      size: 151113560
+    - path: src/prepare.py
+      hash: md5
+      md5: f785622415252236cbd4f77a1b0daeff
+      size: 2738
+    outs:
+    - path: data/prepared
+      hash: md5
+      md5: 17ffe4a1ec4977ea34598140adc2ebd4.dir
+      size: 164385386
       nfiles: 2

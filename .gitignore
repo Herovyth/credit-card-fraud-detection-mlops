@@ -3,7 +3,6 @@ __pycache__/
 .venv/
 .env
 
-data/
 models/
 
 .ipynb_checkpoints
