@@ -1,12 +1,15 @@
 x-airflow-common: &airflow-common
-  image: apache/airflow:2.9.1-python3.11
+  build:
+    context: .
+    target: airflow
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CORE__FERNET_KEY: ""
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
+    # session — для UI; basic_auth — для REST/API (див. попередження перед Airflow 3.0)
+    AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.session,airflow.api.auth.backend.basic_auth"
     # Шлях до проєкту всередині контейнера
     ML_PROJECT_ROOT: /opt/ml_project
     MLFLOW_TRACKING_URI: sqlite:////opt/ml_project/mlflow.db
@@ -51,7 +54,6 @@ services:
           --lastname User \
           --role Admin \
           --email admin@example.com
-        pip install dvc mlflow scikit-learn pandas joblib seaborn
     restart: "no"
 
   # Scheduler

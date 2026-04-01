@@ -1,4 +1,4 @@
-name: Model CI (Train, Test, CML Report)
+name: Model CI (Train, Test, CML Report) + DAG Integrity + Docker Build
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip 
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Lint — flake8 (критичні помилки)
@@ -35,23 +35,34 @@ jobs:
         run: |
           black . --check
 
-      # Pre-train тести (перевірка даних, без тренування)
+      - name: Install Airflow for DAG tests
+        run: |
+          pip install apache-airflow==2.9.1 --constraint \
+            "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.1/constraints-3.11.txt"
+
+      - name: DAG integrity test
+        env:
+          AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+          AIRFLOW_HOME: /tmp/airflow
+        run: |
+          airflow db init
+          pytest tests/test_dag.py -v --tb=short --no-header
+
       - name: Pre-train tests (data validation)
         env:
           DATA_PATH: data/sample/creditcard_sample.csv
         run: |
           pytest tests/ -v -k "DataPreTrain" --tb=short --no-header
 
-      # Тренування на малій підвибірці (CI-режим)
       - name: Train model (CI mode — 5000 rows)
+        env:
+          CI: "true"
         run: |
           python src/train.py data/sample models \
-            --ci-mode \
             --max-rows 5000 \
             --n_estimators 50 \
             --max_depth 10
 
-      # Post-train тести + Quality Gate
       - name: Post-train tests + Quality Gate
         env:
           F1_THRESHOLD: "0.60"
@@ -59,7 +70,13 @@ jobs:
         run: |
           pytest tests/ -v -k "ArtifactsPostTrain" --tb=short --no-header
 
-      # CML звіт у PR
+      - name: Docker Build — перевірка збірки образу
+        run: |
+          docker build \
+            --target runtime \
+            --tag creditcard-fraud-mlops:ci-${{ github.sha }} \
+            .
+
       - name: Setup CML
         if: github.event_name == 'pull_request'
         uses: iterative/setup-cml@v2
@@ -100,7 +117,6 @@ jobs:
 
           cml comment create report.md
 
-      # CD: зберегти model.pkl як artifact
       - name: Upload model artifact (main only)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/upload-artifact@v4
