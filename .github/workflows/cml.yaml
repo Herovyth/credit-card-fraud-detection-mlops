@@ -35,15 +35,15 @@ jobs:
         run: |
           black . --check
 
-      # Pre-train тести (перевірка sample даних, без тренування)
+      # Pre-train тести (перевірка даних, без тренування)
       - name: Pre-train tests (data validation)
         env:
-          DATA_PATH: data/raw/creditcard_sample.csv
+          DATA_PATH: data/raw/creditcard.csv
         run: |
           pytest tests/ -v -k "DataPreTrain" --tb=short --no-header
 
       # Тренування на малій підвибірці (CI-режим)
-      - name: Train model (CI mode — 5000 rows, sample data)
+      - name: Train model (CI mode — 5000 rows)
         run: |
           python src/train.py data/raw models \
             --ci-mode \

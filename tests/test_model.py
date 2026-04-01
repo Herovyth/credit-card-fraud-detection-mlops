@@ -22,15 +22,6 @@ REQUIRED_COLUMNS = {"Time", "Amount", "Class"} | {f"V{i}" for i in range(1, 29)}
 
 
 @pytest.fixture(scope="module")
-def sample_df():
-    path = PROJECT_ROOT / DATA_PATH
-    assert path.exists(), (
-        f"Sample CSV не знайдено: {path}\n" "Запустіть: python scripts/make_sample.py"
-    )
-    return pd.read_csv(path)
-
-
-@pytest.fixture(scope="module")
 def metrics():
     path = PROJECT_ROOT / "metrics.json"
     assert path.exists(), "metrics.json не знайдено. Спочатку запустіть train.py"
