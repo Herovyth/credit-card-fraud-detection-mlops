@@ -118,7 +118,7 @@ class TestArtifactsPostTrain:
 
     def test_model_output_shape(self, sample_df):
         model = joblib.load(PROJECT_ROOT / "model.pkl")
-        train_df = pd.read_csv(PROJECT_ROOT / "data" / "prepared" / "train.csv")
+        train_df = pd.read_csv(PROJECT_ROOT / "data" / "sample" / "train.csv")
         X = train_df.drop(columns=["Class"]).head(10)
         preds = model.predict(X)
         assert preds.shape == (10,), f"Неочікувана форма виходу: {preds.shape}"
