@@ -7,7 +7,7 @@ stages:
     outs:
     - data/prepared
   train:
-    cmd: python src/train.py data/prepared data/models
+    cmd: python src/train.py data/prepared data/models --ci-mode
     deps:
     - data/prepared
     - src/train.py

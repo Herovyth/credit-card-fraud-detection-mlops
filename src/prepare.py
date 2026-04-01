@@ -65,7 +65,9 @@ def main(input_file: str, output_dir: str):
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Використання: python src/prepare.py <input_csv> <output_dir>")
-        print("Приклад:      python src/prepare.py data/raw/creditcard.csv data/prepared")
+        print(
+            "Приклад:      python src/prepare.py data/raw/creditcard.csv data/prepared"
+        )
         sys.exit(1)
 
     main(input_file=sys.argv[1], output_dir=sys.argv[2])
