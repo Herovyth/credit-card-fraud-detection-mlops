@@ -18,9 +18,8 @@ DAGS_FOLDER = str(Path(__file__).resolve().parents[1] / "dags")
 def test_dag_import_no_errors():
     """DAG-файли завантажуються без помилок імпорту."""
     dag_bag = DagBag(dag_folder=DAGS_FOLDER, include_examples=False)
-    assert len(dag_bag.import_errors) == 0, (
-        f"Помилки імпорту DAG:\n"
-        + "\n".join(f"  {k}: {v}" for k, v in dag_bag.import_errors.items())
+    assert len(dag_bag.import_errors) == 0, f"Помилки імпорту DAG:\n" + "\n".join(
+        f"  {k}: {v}" for k, v in dag_bag.import_errors.items()
     )
 
 
@@ -28,18 +27,18 @@ def test_dag_exists():
     """DAG ml_training_pipeline присутній у DagBag."""
     os.environ["AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT"] = "0"
     dag_bag = DagBag(dag_folder=DAGS_FOLDER, include_examples=False)
-    assert "ml_training_pipeline" in dag_bag.dags, (
-        f"DAG 'ml_training_pipeline' не знайдено. Доступні: {list(dag_bag.dags.keys())}"
-    )
+    assert (
+        "ml_training_pipeline" in dag_bag.dags
+    ), f"DAG 'ml_training_pipeline' не знайдено. Доступні: {list(dag_bag.dags.keys())}"
 
 
 def test_dag_task_count():
     """DAG містить очікувану кількість задач."""
     dag_bag = DagBag(dag_folder=DAGS_FOLDER, include_examples=False)
     dag = dag_bag.dags["ml_training_pipeline"]
-    assert len(dag.tasks) >= 5, (
-        f"Очікується мінімум 5 задач, знайдено: {len(dag.tasks)}"
-    )
+    assert (
+        len(dag.tasks) >= 5
+    ), f"Очікується мінімум 5 задач, знайдено: {len(dag.tasks)}"
 
 
 def test_dag_required_tasks_present():

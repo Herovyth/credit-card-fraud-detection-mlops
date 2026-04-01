@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from airflow import DAG
+
 try:
     from airflow.operators.bash import BashOperator
     from airflow.operators.empty import EmptyOperator
@@ -13,7 +14,7 @@ try:
 except ImportError:
     pass
 
-# Константи 
+# Константи
 
 # Шлях до ML-проєкту всередині контейнера (змонтований через docker-compose)
 ML_PROJECT = os.getenv("ML_PROJECT_ROOT", "/opt/airflow")
@@ -25,7 +26,7 @@ ROC_AUC_THRESHOLD = float(os.getenv("ROC_AUC_THRESHOLD", "0.70"))
 # Python-інтерпретатор у середовищі з ML-залежностями
 PYTHON = os.getenv("ML_PYTHON", "python3")
 
-# Дефолтні аргументи DAG 
+# Дефолтні аргументи DAG
 
 default_args = {
     "owner": "developer",
@@ -35,7 +36,7 @@ default_args = {
     "email_on_failure": False,
 }
 
-# Python-функції для PythonOperator 
+# Python-функції для PythonOperator
 
 
 def check_data_availability(**kwargs):
@@ -78,7 +79,9 @@ def evaluate_and_branch(**kwargs):
     f1 = float(metrics.get("f1", 0))
     roc_auc = float(metrics.get("roc_auc", 0))
 
-    print(f"Метрики: F1={f1:.4f} (поріг={F1_THRESHOLD}) | ROC-AUC={roc_auc:.4f} (поріг={ROC_AUC_THRESHOLD})")
+    print(
+        f"Метрики: F1={f1:.4f} (поріг={F1_THRESHOLD}) | ROC-AUC={roc_auc:.4f} (поріг={ROC_AUC_THRESHOLD})"
+    )
 
     # Передаємо метрики через XCom для наступних кроків
     kwargs["ti"].xcom_push(key="f1", value=f1)
@@ -104,7 +107,7 @@ def register_model_fn(**kwargs):
     mlflow_tracking_path = os.path.join(ML_PROJECT, "mlruns")
     os.makedirs(mlflow_tracking_path, exist_ok=True)
     mlflow.set_tracking_uri(f"file://{mlflow_tracking_path}")
-    
+
     experiment_name = "CreditCard_Fraud_Airflow"
     model_name = "CreditCardFraudDetector"
     model_path = Path(ML_PROJECT) / "model.pkl"
@@ -117,10 +120,12 @@ def register_model_fn(**kwargs):
             experiment_id = client.create_experiment(experiment_name)
         else:
             experiment_id = exp.experiment_id
-            
+
         mlflow.set_experiment(experiment_name)
 
-        with mlflow.start_run(experiment_id=experiment_id, run_name="airflow_registration"):
+        with mlflow.start_run(
+            experiment_id=experiment_id, run_name="airflow_registration"
+        ):
             mlflow.log_metric("f1", f1)
             mlflow.log_metric("roc_auc", roc_auc)
 
@@ -129,7 +134,7 @@ def register_model_fn(**kwargs):
                 mlflow.sklearn.log_model(
                     sk_model=model,
                     artifact_path="model",
-                    registered_model_name=model_name
+                    registered_model_name=model_name,
                 )
                 print("Model logged and registered.")
             else:
@@ -139,9 +144,7 @@ def register_model_fn(**kwargs):
         if versions:
             latest_v = versions[0].version
             client.transition_model_version_stage(
-                name=model_name,
-                version=latest_v,
-                stage="Staging"
+                name=model_name, version=latest_v, stage="Staging"
             )
             print(f"Success: {model_name} v{latest_v} -> Staging")
 
@@ -164,25 +167,25 @@ def notify_low_quality_fn(**kwargs):
     print(message)
 
 
-# Визначення DAG 
+# Визначення DAG
 
 with DAG(
     dag_id="ml_training_pipeline",
     description="Credit Card Fraud Detection — повний ML-пайплайн",
     default_args=default_args,
     start_date=datetime(2024, 1, 1),
-    schedule="0 2 * * *",   # щодня о 02:00; None — лише ручний запуск
+    schedule="0 2 * * *",  # щодня о 02:00; None — лише ручний запуск
     catchup=False,
     tags=["mlops", "creditcard", "lab5"],
 ) as dag:
 
-    # Task 1: перевірка даних 
+    # Task 1: перевірка даних
     check_data = PythonOperator(
         task_id="check_data",
         python_callable=check_data_availability,
     )
 
-    # Task 2: підготовка даних через src/prepare.py 
+    # Task 2: підготовка даних через src/prepare.py
     prepare_data = BashOperator(
         task_id="prepare_data",
         bash_command=(
@@ -192,7 +195,7 @@ with DAG(
         ),
     )
 
-    # Task 3: тренування через src/train.py (CI-режим на sample) 
+    # Task 3: тренування через src/train.py (CI-режим на sample)
     train_model = BashOperator(
         task_id="train_model",
         bash_command=(
@@ -202,7 +205,7 @@ with DAG(
         ),
     )
 
-    # Task 4: оцінка та розгалуження 
+    # Task 4: оцінка та розгалуження
     evaluate_model = BranchPythonOperator(
         task_id="evaluate_model",
         python_callable=evaluate_and_branch,
@@ -220,7 +223,7 @@ with DAG(
         python_callable=notify_low_quality_fn,
     )
 
-    # Task 6: завершення пайплайну 
+    # Task 6: завершення пайплайну
     pipeline_end = EmptyOperator(
         task_id="pipeline_end",
         trigger_rule="none_failed_min_one_success",
