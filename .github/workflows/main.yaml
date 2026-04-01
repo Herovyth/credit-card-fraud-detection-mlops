@@ -87,27 +87,28 @@ jobs:
         env:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "## CI Report — Credit Card Fraud Detection" > report.md
-          echo "" >> report.md
-          echo "_Commit: \`${{ github.sha }}\` | Branch: \`${{ github.head_ref }}\`_" >> report.md
-          echo "" >> report.md
-
-          echo "## Model Metrics" >> report.md
-          echo '```json' >> report.md
-          cat metrics.json >> report.md
-          echo '```' >> report.md
-          echo "" >> report.md
-
-          echo "## Confusion Matrix" >> report.md
-          cml publish confusion_matrix.png --md >> report.md
-          echo "" >> report.md
-
-          echo "## Quality Gate" >> report.md
+          MATRIX_PATH=$(find . -name "confusion_matrix.png" | head -1)
+          
+          cat > report.md << EOF
+          ## CI Report — Credit Card Fraud Detection
+          _Commit: \`${{ github.sha }}\` | Branch: \`${{ github.head_ref }}\`_
+          
+          ## Model Metrics
+          \`\`\`json
+          $(cat metrics.json)
+          \`\`\`
+          
+          ## Confusion Matrix
+          ![Confusion Matrix]($MATRIX_PATH)
+          EOF
+          
           python - << 'PYEOF'
           import json
           metrics = json.load(open("metrics.json"))
           thresholds = {"f1": 0.60, "roc_auc": 0.70}
-          lines = ["| Метрика | Значення | Поріг | Статус |", "|---------|----------|-------|--------|"]
+          lines = ["## Quality Gate",
+                   "| Метрика | Значення | Поріг | Статус |",
+                   "|---------|----------|-------|--------|"]
           for metric, threshold in thresholds.items():
               val = metrics.get(metric, 0)
               status = "PASS" if val >= threshold else "FAIL"
@@ -115,8 +116,8 @@ jobs:
           with open("report.md", "a") as f:
               f.write("\n".join(lines) + "\n")
           PYEOF
-
-          cml comment create report.md
+          
+          cml comment create --publish report.md
 
       - name: Upload model artifact (main only)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
