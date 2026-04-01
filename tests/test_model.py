@@ -92,9 +92,7 @@ class TestDataPreTrain:
 class TestArtifactsPostTrain:
 
     def test_model_pkl_exists(self):
-        assert (
-            PROJECT_ROOT / "model.pkl"
-        ).exists(), "model.pkl не знайдено"
+        assert (PROJECT_ROOT / "model.pkl").exists(), "model.pkl не знайдено"
 
     def test_metrics_json_exists(self):
         assert (PROJECT_ROOT / "metrics.json").exists(), "metrics.json не знайдено"
