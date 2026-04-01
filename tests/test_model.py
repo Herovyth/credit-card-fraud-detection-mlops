@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 # Константи
 
-DATA_PATH = os.getenv("DATA_PATH", "data/raw/creditcard.csv")
+DATA_PATH = os.getenv("DATA_PATH", "data/sample/creditcard_sample.csv")
 F1_THRESHOLD = float(os.getenv("F1_THRESHOLD", "0.70"))
 
 # Очікувані колонки датасету Credit Card Fraud
@@ -19,6 +19,15 @@ REQUIRED_COLUMNS = {"Time", "Amount", "Class"} | {f"V{i}" for i in range(1, 29)}
 
 
 # Fixtures
+
+
+@pytest.fixture(scope="module")
+def sample_df():
+    path = PROJECT_ROOT / DATA_PATH
+    assert path.exists(), (
+        f"Sample CSV не знайдено: {path}\n" "Запустіть: python scripts/make_sample.py"
+    )
+    return pd.read_csv(path)
 
 
 @pytest.fixture(scope="module")
