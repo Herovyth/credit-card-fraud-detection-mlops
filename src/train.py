@@ -54,7 +54,7 @@ def parse_args():
     parser.add_argument(
         "--max-rows",
         type=int,
-        default=5000,
+        default=None,
         help="Обмежити кількість рядків train/test (для CI-режиму)",
     )
     parser.add_argument(
@@ -67,7 +67,7 @@ def parse_args():
 
 # 2. Завантаження та передобробка даних
 
-def load_prepared(prepared_dir: str, max_rows: int = 5000):
+def load_prepared(prepared_dir: str, max_rows: int = None):
     train_path = os.path.join(prepared_dir, "train.csv")
     test_path = os.path.join(prepared_dir, "test.csv")
 
