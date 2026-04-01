@@ -4,8 +4,7 @@ scikit-learn
 matplotlib
 seaborn
 mlflow
-jupyter
+dvc
 pytest
 flake8
 black
-dvc

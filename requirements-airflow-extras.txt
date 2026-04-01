@@ -1,0 +1,9 @@
+# Додаткові пакети в образі Airflow (без --constraint: інакше часто конфліктує packaging/mlflow).
+# Після установки в Dockerfile примусово відкочуються Flask/Werkzeug під Airflow 2.9.1.
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+joblib
+mlflow>=2.14.0,<3

@@ -1,0 +1,6 @@
+.git
+.venv
+data/**
+!data/**/*.dvc
+mlruns/
+**/__pycache__

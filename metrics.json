@@ -3,5 +3,5 @@
   "f1": 0.6667,
   "precision": 1.0,
   "recall": 0.5,
-  "roc_auc": 0.7485
+  "roc_auc": 0.7467
 }
