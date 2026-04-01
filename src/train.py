@@ -29,6 +29,7 @@ db_path = project_root / "mlflow.db"
 
 # 1. Парсинг аргументів командного рядка
 
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Train RandomForest for Credit Card Fraud Detection (DVC stage)"
@@ -67,6 +68,7 @@ def parse_args():
 
 # 2. Завантаження та передобробка даних
 
+
 def load_prepared(prepared_dir: str, max_rows: int = None):
     train_path = os.path.join(prepared_dir, "train.csv")
     test_path = os.path.join(prepared_dir, "test.csv")
@@ -93,6 +95,7 @@ def load_prepared(prepared_dir: str, max_rows: int = None):
 
 # 3. Побудова графіків
 
+
 def plot_confusion_matrix(y_true, y_pred, output_path: str):
     cm = confusion_matrix(y_true, y_pred)
     fig, ax = plt.subplots(figsize=(6, 5))
@@ -114,7 +117,9 @@ def plot_confusion_matrix(y_true, y_pred, output_path: str):
     print(f"Confusion matrix збережено: {output_path}")
 
 
-def plot_feature_importance(model, feature_names: list, output_path: str, top_n: int = 15):
+def plot_feature_importance(
+    model, feature_names: list, output_path: str, top_n: int = 15
+):
     importances = model.feature_importances_
     indices = np.argsort(importances)[::-1][:top_n]
 
@@ -137,11 +142,14 @@ def plot_feature_importance(model, feature_names: list, output_path: str, top_n:
 
 # 4. Збереження CI-артефактів
 
+
 def save_ci_artifacts(model, y_test, y_test_pred, y_test_proba):
     metrics = {
         "accuracy": round(float(accuracy_score(y_test, y_test_pred)), 4),
         "f1": round(float(f1_score(y_test, y_test_pred, zero_division=0)), 4),
-        "precision": round(float(precision_score(y_test, y_test_pred, zero_division=0)), 4),
+        "precision": round(
+            float(precision_score(y_test, y_test_pred, zero_division=0)), 4
+        ),
         "recall": round(float(recall_score(y_test, y_test_pred, zero_division=0)), 4),
         "roc_auc": round(float(roc_auc_score(y_test, y_test_proba)), 4),
     }
@@ -150,13 +158,16 @@ def save_ci_artifacts(model, y_test, y_test_pred, y_test_proba):
         json.dump(metrics, f, ensure_ascii=False, indent=2)
     print(f"CI: metrics.json → {metrics}")
 
-    plot_confusion_matrix(y_test, y_test_pred, str(project_root / "confusion_matrix.png"))
+    plot_confusion_matrix(
+        y_test, y_test_pred, str(project_root / "confusion_matrix.png")
+    )
 
     joblib.dump(model, project_root / "model.pkl")
     print(f"CI: model.pkl збережено")
 
 
 # 5. Null-контекст для CI
+
 
 class _NullContext:
     def __enter__(self):
@@ -167,6 +178,7 @@ class _NullContext:
 
 
 # 6. Основна функція тренування
+
 
 def train(args):
     X_train, X_test, y_train, y_test, feature_names = load_prepared(
@@ -249,12 +261,16 @@ def train(args):
         for k, v in metrics_test.items():
             print(f"  {k}: {v:.4f}")
         print("\nClassification Report (Test)")
-        print(classification_report(y_test, y_test_pred, target_names=["Normal", "Fraud"]))
+        print(
+            classification_report(y_test, y_test_pred, target_names=["Normal", "Fraud"])
+        )
 
         if not args.ci_mode:
             mlflow.log_metrics(metrics_train)
             mlflow.log_metrics(metrics_test)
-            mlflow.log_metric("max_depth_numeric", args.max_depth if args.max_depth else 0)
+            mlflow.log_metric(
+                "max_depth_numeric", args.max_depth if args.max_depth else 0
+            )
 
         # Артефакти
         cm_path = os.path.join(args.models_dir, "confusion_matrix.png")
