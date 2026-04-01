@@ -43,9 +43,10 @@ def parse_args():
         help="Папка для збереження моделі та артефактів",
     )
     # Гіперпараметри (опціональні)
-    parser.add_argument("--n_estimators", type=int, default=100)
-    parser.add_argument("--max_depth", type=int, default=None)
-    parser.add_argument("--min_samples_split", type=int, default=2)
+    parser.add_argument("--n_estimators", type=int, default=144)
+    parser.add_argument("--max_depth", type=int, default=15)
+    parser.add_argument("--min_samples_split", type=int, default=8)
+    parser.add_argument("--min_samples_leaf", type=int, default=3)
     parser.add_argument("--random_state", type=int, default=42)
     parser.add_argument("--threshold", type=float, default=0.5)
     return parser.parse_args()
@@ -147,6 +148,7 @@ def train(args):
         mlflow.log_param("n_estimators", args.n_estimators)
         mlflow.log_param("max_depth", args.max_depth)
         mlflow.log_param("min_samples_split", args.min_samples_split)
+        mlflow.log_param("min_samples_leaf", args.min_samples_leaf)
         mlflow.log_param("random_state", args.random_state)
         mlflow.log_param("threshold", args.threshold)
         mlflow.log_param("class_weight_fraud", class_weight[1])
@@ -158,6 +160,7 @@ def train(args):
             n_estimators=args.n_estimators,
             max_depth=args.max_depth,
             min_samples_split=args.min_samples_split,
+            min_samples_leaf=args.min_samples_leaf,
             class_weight=class_weight,
             random_state=args.random_state,
             n_jobs=-1,

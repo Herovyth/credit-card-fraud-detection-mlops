@@ -10,13 +10,13 @@ stages:
       nfiles: 2
     - path: src/train.py
       hash: md5
-      md5: 3a4cf78462b4bec6eecf3de1ad500282
-      size: 8156
+      md5: 9717e74cd333d34deb6c46a7bc305c8e
+      size: 8341
     outs:
     - path: data/models
       hash: md5
-      md5: 607e7f4200666b76f479e21df43a0056.dir
-      size: 70088
+      md5: a28267b621f3a0caf3e812f48ea0c945.dir
+      size: 67870
       nfiles: 2
   prepare:
     cmd: python src/prepare.py data/raw/creditcard.csv data/prepared

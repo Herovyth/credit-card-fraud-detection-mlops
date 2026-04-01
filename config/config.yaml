@@ -1,0 +1,51 @@
+seed: 42
+
+mlflow:
+  tracking_uri: "sqlite:///mlflow.db"
+  experiment_name: "CreditCard_Fraud_Detection"
+  log_model: true
+  register_model: false
+  model_name: "CreditCardFraudDetector"
+  stage: "Staging"
+
+data:
+  prepared_dir: "data/prepared"
+
+model:
+  type: "random_forest"
+
+hpo:
+  n_trials: 20
+  sampler: "tpe"          # tpe | random | grid
+  metric: "f1"            # f1 | roc_auc
+  direction: "maximize"
+  use_cv: false
+  cv_folds: 5
+
+  random_forest:
+    n_estimators:      { low: 50,   high: 300 }
+    max_depth:         { low: 3,    high: 15  }
+    min_samples_split: { low: 2,    high: 10  }
+    min_samples_leaf:  { low: 1,    high: 5   }
+
+  logistic_regression:
+    C:       { low: 1.0e-3, high: 1.0e2 }
+    solver:  ["liblinear", "lbfgs"]
+    penalty: ["l2"]
+
+  # Сітка для GridSampler
+  grid:
+    random_forest:
+      n_estimators:      [50, 100, 200]
+      max_depth:         [5, 10, 15]
+      min_samples_split: [2, 5, 10]
+      min_samples_leaf:  [1, 2, 4]
+    logistic_regression:
+      C:       [0.01, 0.1, 1.0, 10.0]
+      solver:  ["liblinear"]
+      penalty: ["l2"]
+
+hydra:
+  run:
+    dir: .
+  output_subdir: null
