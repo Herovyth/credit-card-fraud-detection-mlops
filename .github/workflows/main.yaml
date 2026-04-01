@@ -39,6 +39,7 @@ jobs:
         run: |
           pip install apache-airflow==2.9.1 --constraint \
             "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.1/constraints-3.11.txt"
+          pip install "typing_extensions>=4.6.0" --upgrade
 
       - name: DAG integrity test
         env:
