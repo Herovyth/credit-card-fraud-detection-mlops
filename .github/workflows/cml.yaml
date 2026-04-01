@@ -45,7 +45,7 @@ jobs:
       # Тренування на малій підвибірці (CI-режим)
       - name: Train model (CI mode — 5000 rows)
         run: |
-          python src/train.py data/sample models \
+          python src/train.py data/prepared models \
             --ci-mode \
             --max-rows 5000 \
             --n_estimators 50 \
