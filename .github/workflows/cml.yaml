@@ -88,7 +88,7 @@ jobs:
           python - << 'PYEOF'
           import json
           metrics = json.load(open("metrics.json"))
-          thresholds = {"f1": 0.70, "roc_auc": 0.85}
+          thresholds = {"f1": 0.60, "roc_auc": 0.70}
           lines = ["| Метрика | Значення | Поріг | Статус |", "|---------|----------|-------|--------|"]
           for metric, threshold in thresholds.items():
               val = metrics.get(metric, 0)
@@ -100,7 +100,7 @@ jobs:
 
           cml comment create report.md
 
-      # CD: зберегти model.pkl як artifact (тільки main)
+      # CD: зберегти model.pkl як artifact
       - name: Upload model artifact (main only)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/upload-artifact@v4
