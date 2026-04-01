@@ -1,0 +1,111 @@
+name: Model CI (Train, Test, CML Report)
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint — flake8 (критичні помилки)
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Format check — black
+        run: |
+          black . --check
+
+      # Pre-train тести (перевірка sample даних, без тренування)
+      - name: Pre-train tests (data validation)
+        env:
+          DATA_PATH: data/raw/creditcard_sample.csv
+        run: |
+          pytest tests/ -v -k "DataPreTrain" --tb=short --no-header
+
+      # Тренування на малій підвибірці (CI-режим)
+      - name: Train model (CI mode — 5000 rows, sample data)
+        run: |
+          python src/train.py data/raw models \
+            --ci-mode \
+            --max-rows 5000 \
+            --n_estimators 50 \
+            --max_depth 10
+
+      # Post-train тести + Quality Gate
+      - name: Post-train tests + Quality Gate
+        env:
+          F1_THRESHOLD: "0.70"
+        run: |
+          pytest tests/ -v -k "ArtifactsPostTrain" --tb=short --no-header
+
+      # CML звіт у PR
+      - name: Setup CML
+        if: github.event_name == 'pull_request'
+        uses: iterative/setup-cml@v2
+
+      - name: Create CML report
+        if: github.event_name == 'pull_request'
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "## CI Report — Credit Card Fraud Detection" > report.md
+          echo "" >> report.md
+          echo "_Commit: \`${{ github.sha }}\` | Branch: \`${{ github.head_ref }}\`_" >> report.md
+          echo "" >> report.md
+
+          echo "## Model Metrics" >> report.md
+          echo '```json' >> report.md
+          cat metrics.json >> report.md
+          echo '```' >> report.md
+          echo "" >> report.md
+
+          echo "## Confusion Matrix" >> report.md
+          cml publish confusion_matrix.png --md >> report.md
+          echo "" >> report.md
+
+          echo "## Quality Gate" >> report.md
+          python - << 'PYEOF'
+          import json
+          metrics = json.load(open("metrics.json"))
+          thresholds = {"f1": 0.70, "roc_auc": 0.85}
+          lines = ["| Метрика | Значення | Поріг | Статус |", "|---------|----------|-------|--------|"]
+          for metric, threshold in thresholds.items():
+              val = metrics.get(metric, 0)
+              status = "PASS" if val >= threshold else "FAIL"
+              lines.append(f"| {metric} | {val:.4f} | {threshold} | {status} |")
+          with open("report.md", "a") as f:
+              f.write("\n".join(lines) + "\n")
+          PYEOF
+
+          cml comment create report.md
+
+      # CD: зберегти model.pkl як artifact (тільки main)
+      - name: Upload model artifact (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fraud-detector-model
+          path: |
+            model.pkl
+            metrics.json
+          retention-days: 30

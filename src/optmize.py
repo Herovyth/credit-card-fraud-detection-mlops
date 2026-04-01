@@ -20,6 +20,7 @@ import mlflow.sklearn
 import numpy as np
 import optuna
 import pandas as pd
+import hashlib
 from omegaconf import DictConfig, OmegaConf
 from sklearn.base import clone
 from sklearn.ensemble import RandomForestClassifier
@@ -30,6 +31,10 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 import hydra
+
+
+def file_md5(path: str) -> str:
+    return hashlib.md5(open(path, "rb").read()).hexdigest()
 
 
 # 1. Відтворюваність
@@ -237,6 +242,9 @@ def main(cfg: DictConfig) -> None:
         grid_space = {k: list(v) for k, v in raw.items()}
 
     sampler = make_sampler(cfg.hpo.sampler, seed=cfg.seed, grid_space=grid_space)
+
+    mlflow.set_tag("train_data_md5", file_md5(str(project_root / cfg.data.prepared_dir / "train.csv")))
+    mlflow.set_tag("test_data_md5",  file_md5(str(project_root / cfg.data.prepared_dir / "test.csv")))
 
     # Parent run (Study)
     with mlflow.start_run(run_name=f"hpo_{cfg.hpo.sampler}_{cfg.model.type}") as parent_run:

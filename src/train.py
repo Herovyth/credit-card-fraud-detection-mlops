@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+import json
 
 import matplotlib.pyplot as plt
 import mlflow
@@ -20,6 +21,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from pathlib import Path
+import joblib
 
 project_root = Path(__file__).resolve().parents[1]
 db_path = project_root / "mlflow.db"
@@ -49,12 +51,23 @@ def parse_args():
     parser.add_argument("--min_samples_leaf", type=int, default=3)
     parser.add_argument("--random_state", type=int, default=42)
     parser.add_argument("--threshold", type=float, default=0.5)
+    parser.add_argument(
+        "--max-rows",
+        type=int,
+        default=5000,
+        help="Обмежити кількість рядків train/test (для CI-режиму)",
+    )
+    parser.add_argument(
+        "--ci-mode",
+        action="store_true",
+        help="CI-режим: зберігати model.pkl + metrics.json + confusion_matrix.png у корінь",
+    )
     return parser.parse_args()
 
 
 # 2. Завантаження та передобробка даних
 
-def load_prepared(prepared_dir: str):
+def load_prepared(prepared_dir: str, max_rows: int = 5000):
     train_path = os.path.join(prepared_dir, "train.csv")
     test_path = os.path.join(prepared_dir, "test.csv")
 
@@ -73,6 +86,8 @@ def load_prepared(prepared_dir: str):
 
     feature_names = X_train.columns.tolist()
     print(f"Train: {len(X_train)} | Test: {len(X_test)} | Ознаки: {len(feature_names)}")
+    if max_rows:
+        print(f"CI-режим: обмежено до {max_rows} рядків")
     return X_train, X_test, y_train, y_test, feature_names
 
 
@@ -120,10 +135,43 @@ def plot_feature_importance(model, feature_names: list, output_path: str, top_n:
     print(f"Feature importance збережено: {output_path}")
 
 
-# 4. Основна функція тренування
+# 4. Збереження CI-артефактів
+
+def save_ci_artifacts(model, y_test, y_test_pred, y_test_proba):
+    metrics = {
+        "accuracy": round(float(accuracy_score(y_test, y_test_pred)), 4),
+        "f1": round(float(f1_score(y_test, y_test_pred, zero_division=0)), 4),
+        "precision": round(float(precision_score(y_test, y_test_pred, zero_division=0)), 4),
+        "recall": round(float(recall_score(y_test, y_test_pred, zero_division=0)), 4),
+        "roc_auc": round(float(roc_auc_score(y_test, y_test_proba)), 4),
+    }
+    metrics_path = project_root / "metrics.json"
+    with open(metrics_path, "w", encoding="utf-8") as f:
+        json.dump(metrics, f, ensure_ascii=False, indent=2)
+    print(f"CI: metrics.json → {metrics}")
+
+    plot_confusion_matrix(y_test, y_test_pred, str(project_root / "confusion_matrix.png"))
+
+    joblib.dump(model, project_root / "model.pkl")
+    print(f"CI: model.pkl збережено")
+
+
+# 5. Null-контекст для CI
+
+class _NullContext:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        pass
+
+
+# 6. Основна функція тренування
 
 def train(args):
-    X_train, X_test, y_train, y_test, feature_names = load_prepared(args.prepared_dir)
+    X_train, X_test, y_train, y_test, feature_names = load_prepared(
+        args.prepared_dir, max_rows=args.max_rows
+    )
     os.makedirs(args.models_dir, exist_ok=True)
 
     # Ваги класів (боротьба з дисбалансом)
@@ -131,28 +179,31 @@ def train(args):
     print(f"Ваги класів: {class_weight}")
 
     # MLflow
-    mlflow.set_tracking_uri(f"sqlite:///{db_path.as_posix()}")
-    mlflow.set_experiment("CreditCard_Fraud_Detection")
+    if not args.ci_mode:
+        mlflow.set_tracking_uri(f"sqlite:///{db_path.as_posix()}")
+        mlflow.set_experiment("CreditCard_Fraud_Detection")
 
-    with mlflow.start_run():
+    run_ctx = mlflow.start_run() if not args.ci_mode else _NullContext()
 
-        # Теги
-        mlflow.set_tag("author", "student")
-        mlflow.set_tag("dataset_version", "kaggle_v1")
-        mlflow.set_tag("model_type", "RandomForest")
-        mlflow.set_tag("task", "binary_classification")
-        mlflow.set_tag("pipeline", "dvc")
-        mlflow.set_tag("imbalance_strategy", "class_weight")
+    with run_ctx:
+        if not args.ci_mode:
+            # Теги
+            mlflow.set_tag("author", "student")
+            mlflow.set_tag("dataset_version", "kaggle_v1")
+            mlflow.set_tag("model_type", "RandomForest")
+            mlflow.set_tag("task", "binary_classification")
+            mlflow.set_tag("pipeline", "dvc")
+            mlflow.set_tag("imbalance_strategy", "class_weight")
 
-        # Гіперпараметри
-        mlflow.log_param("n_estimators", args.n_estimators)
-        mlflow.log_param("max_depth", args.max_depth)
-        mlflow.log_param("min_samples_split", args.min_samples_split)
-        mlflow.log_param("min_samples_leaf", args.min_samples_leaf)
-        mlflow.log_param("random_state", args.random_state)
-        mlflow.log_param("threshold", args.threshold)
-        mlflow.log_param("class_weight_fraud", class_weight[1])
-        mlflow.log_param("prepared_dir", args.prepared_dir)
+            # Гіперпараметри
+            mlflow.log_param("n_estimators", args.n_estimators)
+            mlflow.log_param("max_depth", args.max_depth)
+            mlflow.log_param("min_samples_split", args.min_samples_split)
+            mlflow.log_param("min_samples_leaf", args.min_samples_leaf)
+            mlflow.log_param("random_state", args.random_state)
+            mlflow.log_param("threshold", args.threshold)
+            mlflow.log_param("class_weight_fraud", class_weight[1])
+            mlflow.log_param("prepared_dir", args.prepared_dir)
 
         # Навчання
         print("Навчання моделі...")
@@ -200,28 +251,33 @@ def train(args):
         print("\nClassification Report (Test)")
         print(classification_report(y_test, y_test_pred, target_names=["Normal", "Fraud"]))
 
-        mlflow.log_metrics(metrics_train)
-        mlflow.log_metrics(metrics_test)
-        mlflow.log_metric("max_depth_numeric", args.max_depth if args.max_depth else 0)
+        if not args.ci_mode:
+            mlflow.log_metrics(metrics_train)
+            mlflow.log_metrics(metrics_test)
+            mlflow.log_metric("max_depth_numeric", args.max_depth if args.max_depth else 0)
 
         # Артефакти
         cm_path = os.path.join(args.models_dir, "confusion_matrix.png")
         plot_confusion_matrix(y_test, y_test_pred, cm_path)
-        mlflow.log_artifact(cm_path)
 
         fi_path = os.path.join(args.models_dir, "feature_importance.png")
         plot_feature_importance(model, feature_names, fi_path)
-        mlflow.log_artifact(fi_path)
 
-        # Збереження моделі
-        mlflow.sklearn.log_model(
-            model,
-            "random_forest_model",
-            registered_model_name="CreditCardFraudDetector",
-        )
+        if not args.ci_mode:
+            mlflow.log_artifact(cm_path)
+            mlflow.log_artifact(fi_path)
+            # Збереження моделі
+            mlflow.sklearn.log_model(
+                model,
+                "random_forest_model",
+                registered_model_name="CreditCardFraudDetector",
+            )
+            run_id = mlflow.active_run().info.run_id
+            print(f"\nЗапуск завершено. Run ID: {run_id}")
 
-        run_id = mlflow.active_run().info.run_id
-        print(f"\nЗапуск завершено. Run ID: {run_id}")
+        if args.ci_mode:
+            save_ci_artifacts(model, y_test, y_test_pred, y_test_proba)
+            print("CI-режим завершено.")
 
 
 if __name__ == "__main__":
