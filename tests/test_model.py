@@ -93,8 +93,8 @@ class TestArtifactsPostTrain:
 
     def test_model_pkl_exists(self):
         assert (
-            PROJECT_ROOT / "models/best_model.pkl"
-        ).exists(), "best_model.pkl не знайдено"
+            PROJECT_ROOT / "model.pkl"
+        ).exists(), "model.pkl не знайдено"
 
     def test_metrics_json_exists(self):
         assert (PROJECT_ROOT / "metrics.json").exists(), "metrics.json не знайдено"
@@ -114,12 +114,12 @@ class TestArtifactsPostTrain:
             assert 0.0 <= float(val) <= 1.0, f"Метрика '{key}' поза межами [0,1]: {val}"
 
     def test_model_can_be_loaded(self):
-        model = joblib.load(PROJECT_ROOT / "models/best_model.pkl")
+        model = joblib.load(PROJECT_ROOT / "model.pkl")
         assert hasattr(model, "predict"), "Завантажений об'єкт не є sklearn-моделлю"
         assert hasattr(model, "predict_proba"), "Модель не підтримує predict_proba"
 
     def test_model_output_shape(self, sample_df):
-        model = joblib.load(PROJECT_ROOT / "models/best_model.pkl")
+        model = joblib.load(PROJECT_ROOT / "model.pkl")
         train_df = pd.read_csv(PROJECT_ROOT / "data" / "prepared" / "train.csv")
         X = train_df.drop(columns=["Class"]).head(10)
         preds = model.predict(X)
