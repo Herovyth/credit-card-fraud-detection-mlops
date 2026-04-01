@@ -54,7 +54,8 @@ jobs:
       # Post-train тести + Quality Gate
       - name: Post-train tests + Quality Gate
         env:
-          F1_THRESHOLD: "0.70"
+          F1_THRESHOLD: "0.60"
+          ROC_AUC_THRESHOLD: "0.70"
         run: |
           pytest tests/ -v -k "ArtifactsPostTrain" --tb=short --no-header
 

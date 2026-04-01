@@ -13,6 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 DATA_PATH = os.getenv("DATA_PATH", "data/sample/creditcard_sample.csv")
 F1_THRESHOLD = float(os.getenv("F1_THRESHOLD", "0.60"))
+ROC_AUC_THRESHOLD = float(os.getenv("ROC_AUC_THRESHOLD", "0.70"))
 
 # Очікувані колонки датасету Credit Card Fraud
 REQUIRED_COLUMNS = {"Time", "Amount", "Class"} | {f"V{i}" for i in range(1, 29)}
@@ -131,4 +132,6 @@ class TestArtifactsPostTrain:
 
     def test_quality_gate_roc_auc(self, metrics):
         roc_auc = float(metrics["roc_auc"])
-        assert roc_auc >= 0.70, f"ROC-AUC занадто низький: {roc_auc:.4f} < 0.85"
+        assert (
+            roc_auc >= ROC_AUC_THRESHOLD
+        ), f"ROC-AUC занадто низький: {ROC_AUC_THRESHOLD:.4f} < 0.85"
